@@ -27,6 +27,8 @@ export const VOICE_PRESETS: VoicePreset[] = [
   { id: 'dark-fantasy-narrator', name: 'Dark Fantasy Narrator', gender: 'neutral', style: 'dark-fantasy', matchHints: ['daniel', 'tom', 'fred'], pitch: 0.8, rateBias: 0.9 },
   { id: 'epic-storyteller', name: 'Epic Storyteller', gender: 'male', style: 'epic', matchHints: ['bruce', 'daniel', 'alex'], pitch: 0.88, rateBias: 0.96 },
   { id: 'documentary-narrator', name: 'Documentary Narrator', gender: 'male', style: 'documentary', matchHints: ['daniel', 'google uk english male', 'microsoft david'], pitch: 0.95, rateBias: 0.97 },
+  { id: 'british-female', name: 'British Female', gender: 'female', style: 'british', matchHints: ['serena', 'fiona', 'google uk english female'], pitch: 1.0, rateBias: 0.98, kokoroVoice: 'bf_emma' },
+  { id: 'british-male', name: 'British Male', gender: 'male', style: 'british', matchHints: ['daniel', 'google uk english male', 'george'], pitch: 0.95, rateBias: 0.97, kokoroVoice: 'bm_george' },
   { id: 'audiobook-narrator', name: 'Audiobook Narrator', gender: 'female', style: 'audiobook', matchHints: ['samantha', 'karen', 'google us english female'], pitch: 1.0, rateBias: 0.98 },
 ];
 
