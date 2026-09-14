@@ -22,7 +22,12 @@ export {
   getKokoroLoadSnapshot,
   isKokoroLoaded,
   generateSpeech,
+  getAiEngine,
+  isWorkerGenerationEnabled,
+  getAvgRtf,
+  getLastRtf,
 } from './kokoroLoader';
+export type { AiEngine } from './kokoroLoader';
 export {
   KOKORO_VOICE_LIST,
   resolveKokoroVoice,
@@ -37,6 +42,15 @@ export {
 } from './kokoroProvider';
 export { applyPronunciations, loadPronunciations, savePronunciations } from './pronunciation';
 export { getCachedAudio, putCachedAudio, clearBookAudioCache, countCachedForBook } from './audioCache';
+export {
+  PREPARE_MODE_TARGETS,
+  PREPARE_MODE_LABELS,
+  effectiveBufferSec,
+  adaptiveMaxChars,
+  KOKORO_CACHE_VERSION,
+  KOKORO_MODEL_ID,
+} from './bufferConfig';
+export type { PrepareMode, BufferTargets } from './bufferConfig';
 
 /** Resolve active TTS — Kokoro AI free by default. */
 export function getActiveTtsProvider(): TtsProvider {

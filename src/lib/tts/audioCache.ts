@@ -1,5 +1,6 @@
 import { openDB, type DBSchema, type IDBPDatabase } from 'idb';
 import { textHash } from './hash';
+import { KOKORO_CACHE_VERSION } from './bufferConfig';
 
 interface AudioCacheDB extends DBSchema {
   chunks: {
@@ -10,6 +11,7 @@ interface AudioCacheDB extends DBSchema {
       chunkId: string;
       voice: string;
       textHash: string;
+      model: string;
       blob: Blob;
       duration?: number;
       createdAt: number;
@@ -22,18 +24,21 @@ let dbPromise: Promise<IDBPDatabase<AudioCacheDB>> | null = null;
 
 function getDb() {
   if (!dbPromise) {
-    dbPromise = openDB<AudioCacheDB>('auralis-audio-cache', 1, {
-      upgrade(db) {
-        const store = db.createObjectStore('chunks', { keyPath: 'key' });
-        store.createIndex('by-book', 'bookId');
+    dbPromise = openDB<AudioCacheDB>('auralis-audio-cache', 2, {
+      upgrade(db, oldVersion) {
+        if (oldVersion < 1) {
+          const store = db.createObjectStore('chunks', { keyPath: 'key' });
+          store.createIndex('by-book', 'bookId');
+        }
+        // v2: model version embedded in key string; no schema change required
       },
     });
   }
   return dbPromise;
 }
 
-export function cacheKey(bookId: string, chunkId: string, voice: string, hash: string) {
-  return `${bookId}|${chunkId}|${voice}|${hash}`;
+export function cacheKey(bookId: string, chunkId: string, voice: string, hash: string, model = KOKORO_CACHE_VERSION) {
+  return `${bookId}|${chunkId}|${voice}|${model}|${hash}`;
 }
 
 export async function getCachedAudio(
@@ -41,11 +46,12 @@ export async function getCachedAudio(
   chunkId: string,
   voice: string,
   text: string,
-): Promise<Blob | null> {
+): Promise<{ blob: Blob; duration?: number } | null> {
   const hash = await textHash(text);
   const db = await getDb();
   const row = await db.get('chunks', cacheKey(bookId, chunkId, voice, hash));
-  return row?.blob ?? null;
+  if (!row) return null;
+  return { blob: row.blob, duration: row.duration };
 }
 
 export async function putCachedAudio(
@@ -64,6 +70,7 @@ export async function putCachedAudio(
     chunkId,
     voice,
     textHash: hash,
+    model: KOKORO_CACHE_VERSION,
     blob,
     duration,
     createdAt: Date.now(),
