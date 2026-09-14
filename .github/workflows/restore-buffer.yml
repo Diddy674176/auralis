@@ -1,0 +1,40 @@
+name: Restore Kokoro buffer pipeline
+on:
+  push:
+    paths:
+      - 'tools/buffer_restore/**'
+      - '.github/workflows/restore-buffer.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Rebuild sources from b64
+        run: |
+          set -euo pipefail
+          restore() {
+            local name="$1" dest="$2" expect="$3"
+            cat tools/buffer_restore/${name}.b64.* | tr -d '\n' | base64 -d > "$dest"
+            actual=$(wc -c < "$dest")
+            echo "$dest bytes=$actual expect=$expect"
+            test "$actual" -eq "$expect"
+          }
+          restore playerEngine src/lib/playerEngine.ts 28859
+          restore kokoroLoader src/lib/tts/kokoroLoader.ts 9856
+          restore SettingsView src/components/SettingsView.tsx 12926
+          restore App src/App.tsx 10933
+          restore PlayerBar src/components/PlayerBar.tsx 5465
+          restore VoicePicker src/components/VoicePicker.tsx 5512
+          printf '\n\n<!-- buffer-restore %s -->\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> README.md
+      - name: Commit if changed
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/lib/playerEngine.ts src/lib/tts/kokoroLoader.ts \
+            src/components/SettingsView.tsx src/App.tsx \
+            src/components/PlayerBar.tsx src/components/VoicePicker.tsx README.md
+          git diff --staged --quiet || git commit -m "fix(kokoro): restore buffer pipeline from b64 parts"
+          git push

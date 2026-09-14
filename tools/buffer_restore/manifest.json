@@ -1,0 +1,32 @@
+{
+  "playerEngine": {
+    "parts": 9,
+    "bytes": 28859,
+    "dest": "src/lib/playerEngine.ts"
+  },
+  "kokoroLoader": {
+    "parts": 3,
+    "bytes": 9856,
+    "dest": "src/lib/tts/kokoroLoader.ts"
+  },
+  "SettingsView": {
+    "parts": 4,
+    "bytes": 12926,
+    "dest": "src/components/SettingsView.tsx"
+  },
+  "App": {
+    "parts": 4,
+    "bytes": 10933,
+    "dest": "src/App.tsx"
+  },
+  "PlayerBar": {
+    "parts": 2,
+    "bytes": 5465,
+    "dest": "src/components/PlayerBar.tsx"
+  },
+  "VoicePicker": {
+    "parts": 2,
+    "bytes": 5512,
+    "dest": "src/components/VoicePicker.tsx"
+  }
+}
