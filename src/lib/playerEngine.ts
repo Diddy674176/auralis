@@ -154,7 +154,7 @@ export class PlayerEngine {
     const targetPara = cur.paragraphIndex + dir;
     let idx = this.chunkIndex;
     if (dir > 0) {
-      idx = this.chunks.findIndex((c) => c.paragraphIndex >} targetPara);
+      idx = this.chunks.findIndex((c) => c.paragraphIndex >= targetPara);
       if (idx < 0) idx = this.chunks.length - 1;
     } else {
       for (let i = this.chunkIndex; i >= 0; i--) {
