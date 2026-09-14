@@ -18,6 +18,8 @@ import {
 } from './lib/db';
 import { loadSystemVoices, mapPresetsToSystemVoices } from './lib/voices';
 import { playerEngine } from './lib/playerEngine';
+import './lib/attachTtsRefresh';
+import { hasKey, setTtsRuntimeConfig } from './lib/tts';
 import { detectMediaLimits } from './lib/platform';
 import { usePlayer } from './hooks/usePlayer';
 
@@ -46,6 +48,11 @@ export default function App() {
     void (async () => {
       const s = await loadSettings();
       setSettings(s);
+      setTtsRuntimeConfig({
+        provider: s.premiumTts.provider,
+        proxyUrl: s.premiumTts.proxyUrl ?? '',
+      });
+      (playerEngine as unknown as { refreshProvider: () => void }).refreshProvider();
       await refresh();
       const voices = await loadSystemVoices();
       const m = mapPresetsToSystemVoices(voices);
@@ -106,8 +113,21 @@ export default function App() {
   }
 
   async function updateSettings(s: AppSettings) {
-    setSettings(s);
-    await saveSettings(s);
+    const next: AppSettings = {
+      ...s,
+      premiumTts: {
+        ...s.premiumTts,
+        apiKeyConfigured:
+          s.premiumTts.provider === 'none' ? false : hasKey(s.premiumTts.provider),
+      },
+    };
+    setSettings(next);
+    setTtsRuntimeConfig({
+      provider: next.premiumTts.provider,
+      proxyUrl: next.premiumTts.proxyUrl ?? '',
+    });
+    (playerEngine as unknown as { refreshProvider: () => void }).refreshProvider();
+    await saveSettings(next);
   }
 
   async function updateActive(patch: Partial<DocumentRecord>) {
