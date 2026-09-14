@@ -37,17 +37,19 @@ export function createKokoroProvider(): TtsProvider {
 
       const cached = await getCachedAudio(bookId, chunkId, voice, text);
       if (cached) {
-        const url = URL.createObjectURL(cached);
-        return { kind: 'audio', url };
+        const url = URL.createObjectURL(cached.blob);
+        return { kind: 'audio', url, durationHintSec: cached.duration };
       }
 
       let lastErr: unknown;
       for (let attempt = 0; attempt < 2; attempt++) {
         try {
           await loadKokoro();
-          const { blob, url } = await generateSpeech(text, voice, req.rate);
-          void putCachedAudio(bookId, chunkId, voice, text, blob);
-          return { kind: 'audio', url, durationHintSec: undefined };
+          // Always synthesize at 1.0 — playbackRate on the audio element handles speed.
+          // That keeps IndexedDB cache reusable across listening speeds.
+          const { blob, url, durationSec } = await generateSpeech(text, voice, 1);
+          void putCachedAudio(bookId, chunkId, voice, text, blob, durationSec);
+          return { kind: 'audio', url, durationHintSec: durationSec };
         } catch (e) {
           lastErr = e;
           if (attempt === 0) await delay(400);
@@ -57,7 +59,10 @@ export function createKokoroProvider(): TtsProvider {
     },
     async preview(text: string, preset: VoicePreset, _voiceURI: string | null) {
       this.cancelPreview();
-      const voice = resolveKokoroVoice(preset.id, preferredVoiceOverride ?? (preset as { kokoroVoice?: string }).kokoroVoice);
+      const voice = resolveKokoroVoice(
+        preset.id,
+        preferredVoiceOverride ?? (preset as { kokoroVoice?: string }).kokoroVoice,
+      );
       onKokoroLoadProgress(() => undefined);
       const { url } = await generateSpeech(applyPronunciations(text), voice as KokoroVoiceId, 1);
       previewAudio = new Audio(url);
