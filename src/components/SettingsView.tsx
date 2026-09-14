@@ -1,6 +1,7 @@
+import { useMemo } from 'react';
 import type { AppSettings, HighlightMode, ThemeMode } from '../types';
 import { detectMediaLimits } from '../lib/platform';
-import { useMemo } from 'react';
+import { PremiumTtsCard } from './PremiumTtsCard';
 
 export function SettingsView({
   settings,
@@ -51,6 +52,8 @@ export function SettingsView({
         />
       </div>
 
+      <PremiumTtsCard settings={settings} onChange={onChange} />
+
       <div className="card stack">
         <h2 className="h2">Highlighting</h2>
         <div className="chip-row">
@@ -70,7 +73,10 @@ export function SettingsView({
             </button>
           ))}
         </div>
-        <p className="muted">* Word mode highlights the active sentence (Web Speech has no reliable per-word boundary events on all devices).</p>
+        <p className="muted">
+          * Word mode highlights the active sentence (Web Speech has no reliable per-word boundary events on
+          all devices).
+        </p>
       </div>
 
       <div className="card stack">
@@ -92,7 +98,8 @@ export function SettingsView({
       <div className="card stack">
         <h2 className="h2">Background / lock screen</h2>
         <div className="tips">
-          <strong>Platform:</strong> {limits.platform} · Media Session: {limits.mediaSessionSupported ? 'yes' : 'no'}
+          <strong>Platform:</strong> {limits.platform} · Media Session:{' '}
+          {limits.mediaSessionSupported ? 'yes' : 'no'}
           <ul style={{ margin: '8px 0 0', paddingLeft: 18 }}>
             {limits.tips.map((t) => (
               <li key={t}>{t}</li>
@@ -100,8 +107,9 @@ export function SettingsView({
           </ul>
         </div>
         <p className="muted">
-          MVP uses free browser Web Speech + Media Session. For more reliable lock-screen audio, install as a PWA,
-          or later enable premium TTS (<code>VITE_TTS_PROVIDER</code> + <code>VITE_TTS_PROXY_URL</code>) which plays via an audio element pipeline.
+          Free path uses browser Web Speech + Media Session. Premium TTS (Settings above) plays via an{' '}
+          <code>&lt;audio&gt;</code> element, which is usually more reliable with the screen locked — especially
+          when installed as a PWA.
         </p>
       </div>
 
@@ -109,7 +117,9 @@ export function SettingsView({
         <h2 className="h2">Privacy</h2>
         <p className="muted">
           Documents stay in your browser (IndexedDB). Nothing is uploaded to an Auralis server.
-          Do not use this app to bypass DRM, paywalls, or access controls.
+          When premium TTS is enabled, text chunks are sent to the chosen provider (ElevenLabs or OpenAI) or
+          your self-hosted proxy so audio can be synthesized. API keys stay in localStorage on this device
+          only. Do not use this app to bypass DRM, paywalls, or access controls.
         </p>
       </div>
     </div>
