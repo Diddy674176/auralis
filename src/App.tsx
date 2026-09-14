@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import './styles/global.css';
-import type { AppSettings, DocumentRecord, MappedVoice } from './types';
+import type { AppSettings, DocumentRecord, MappedVoice, VoiceEngine } from './types';
 import { Library } from './components/Library';
 import { ReaderView } from './components/ReaderView';
 import { PlayerBar } from './components/PlayerBar';
@@ -19,7 +19,13 @@ import {
 import { loadSystemVoices, mapPresetsToSystemVoices } from './lib/voices';
 import { playerEngine } from './lib/playerEngine';
 import './lib/attachTtsRefresh';
-import { hasKey, setTtsRuntimeConfig } from './lib/tts';
+import {
+  hasKey,
+  setTtsRuntimeConfig,
+  setKokoroVoiceOverride,
+  setKokoroBookContext,
+  savePronunciations,
+} from './lib/tts';
 import { detectMediaLimits } from './lib/platform';
 import { usePlayer } from './hooks/usePlayer';
 
@@ -51,8 +57,11 @@ export default function App() {
       setTtsRuntimeConfig({
         provider: s.premiumTts.provider,
         proxyUrl: s.premiumTts.proxyUrl ?? '',
+        voiceEngine: s.voiceEngine ?? 'kokoro',
       });
-      (playerEngine as unknown as { refreshProvider: () => void }).refreshProvider();
+      setKokoroVoiceOverride(s.kokoroVoiceId);
+      savePronunciations(s.pronunciation ?? {});
+      playerEngine.refreshProvider();
       await refresh();
       const voices = await loadSystemVoices();
       const m = mapPresetsToSystemVoices(voices);
@@ -84,12 +93,14 @@ export default function App() {
       updatedAt: Date.now(),
     };
     void saveDocument(next).then(refresh);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- persist on playback movement
   }, [snap.chunkIndex, snap.status, snap.speed, snap.voicePresetId]);
 
   async function handleImported(doc: DocumentRecord) {
     await saveDocument(doc);
     await refresh();
     setActiveId(doc.id);
+    setKokoroBookContext(doc.id);
     playerEngine.load(doc);
     setTab('reader');
   }
@@ -98,6 +109,7 @@ export default function App() {
     const doc = (await listDocuments()).find((d) => d.id === id);
     if (!doc) return;
     setActiveId(id);
+    setKokoroBookContext(doc.id);
     playerEngine.load(doc);
     setTab('reader');
   }
@@ -125,8 +137,11 @@ export default function App() {
     setTtsRuntimeConfig({
       provider: next.premiumTts.provider,
       proxyUrl: next.premiumTts.proxyUrl ?? '',
+      voiceEngine: next.voiceEngine,
     });
-    (playerEngine as unknown as { refreshProvider: () => void }).refreshProvider();
+    setKokoroVoiceOverride(next.kokoroVoiceId);
+    savePronunciations(next.pronunciation ?? {});
+    playerEngine.refreshProvider();
     await saveSettings(next);
   }
 
@@ -142,19 +157,39 @@ export default function App() {
     }
   }
 
+  function changeEngine(engine: VoiceEngine) {
+    void updateSettings({ ...settings, voiceEngine: engine });
+  }
+
+  function changeKokoroVoice(id: string) {
+    setKokoroVoiceOverride(id);
+    void updateSettings({ ...settings, kokoroVoiceId: id });
+  }
+
   return (
     <div className="app-shell">
       <main className="main-scroll">
         {tab === 'home' && (
-          <Library docs={docs} onOpen={(id) => void openDoc(id)} onDelete={(id) => void removeDoc(id)} onAdd={() => setImportOpen(true)} />
+          <Library
+            docs={docs}
+            onOpen={(id) => void openDoc(id)}
+            onDelete={(id) => void removeDoc(id)}
+            onAdd={() => setImportOpen(true)}
+          />
         )}
         {tab === 'reader' && active && (
           <div className="stack">
             {!tipsDismissed && settings.showBackgroundTips && (
               <div className="tips">
-                <strong>Lock-screen tip ({limits.platform}):</strong> {limits.tips[0]}
+                <strong>Lock-screen tip ({limits.platform}):</strong> {limits.tips[0]} With Kokoro,
+                let a few chunks buffer first, then lock — audio continues via HTML media.
                 <div style={{ marginTop: 8, display: 'flex', gap: 8 }}>
-                  <button type="button" className="btn btn-secondary" style={{ minHeight: 36 }} onClick={() => setTipsDismissed(true)}>
+                  <button
+                    type="button"
+                    className="btn btn-secondary"
+                    style={{ minHeight: 36 }}
+                    onClick={() => setTipsDismissed(true)}
+                  >
                     Got it
                   </button>
                   <button
@@ -169,9 +204,15 @@ export default function App() {
               </div>
             )}
             <div className="chip-row">
-              <button type="button" className="chip" onClick={() => setVoicesOpen(true)}>Voices</button>
-              <button type="button" className="chip" onClick={() => setCharsOpen(true)}>Characters</button>
-              <button type="button" className="chip" onClick={() => setImportOpen(true)}>Add more</button>
+              <button type="button" className="chip" onClick={() => setVoicesOpen(true)}>
+                Voices
+              </button>
+              <button type="button" className="chip" onClick={() => setCharsOpen(true)}>
+                Characters
+              </button>
+              <button type="button" className="chip" onClick={() => setImportOpen(true)}>
+                Add more
+              </button>
               <button
                 type="button"
                 className="chip"
@@ -199,11 +240,17 @@ export default function App() {
         {tab === 'reader' && !active && (
           <div className="empty card">
             <p>Open a document from your library to start listening.</p>
-            <button type="button" className="btn btn-primary" onClick={() => setTab('home')}>Go to library</button>
+            <button type="button" className="btn btn-primary" onClick={() => setTab('home')}>
+              Go to library
+            </button>
           </div>
         )}
         {tab === 'settings' && (
-          <SettingsView settings={settings} onChange={(s) => void updateSettings(s)} />
+          <SettingsView
+            settings={settings}
+            onChange={(s) => void updateSettings(s)}
+            hasActiveBook={Boolean(active)}
+          />
         )}
       </main>
 
@@ -217,23 +264,47 @@ export default function App() {
         <button type="button" className={tab === 'home' ? 'active' : ''} onClick={() => setTab('home')}>
           <span className="ico">⌂</span>Home
         </button>
-        <button type="button" className={tab === 'reader' ? 'active' : ''} onClick={() => setTab('reader')}>
+        <button
+          type="button"
+          className={tab === 'reader' ? 'active' : ''}
+          onClick={() => setTab('reader')}
+        >
           <span className="ico">◎</span>Reader
         </button>
-        <button type="button" className={tab === 'settings' ? 'active' : ''} onClick={() => setTab('settings')}>
+        <button
+          type="button"
+          className={tab === 'settings' ? 'active' : ''}
+          onClick={() => setTab('settings')}
+        >
           <span className="ico">⚙</span>Settings
         </button>
       </nav>
 
-      <ImportModal open={importOpen} onClose={() => setImportOpen(false)} onImported={(d) => void handleImported(d)} />
+      <ImportModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        onImported={(d) => void handleImported(d)}
+      />
       <VoicePicker
         open={voicesOpen}
         onClose={() => setVoicesOpen(false)}
         mapped={mapped}
         selectedId={snap.voicePresetId}
+        voiceEngine={settings.voiceEngine}
+        onEngineChange={changeEngine}
+        kokoroVoiceId={settings.kokoroVoiceId}
+        onKokoroVoiceChange={changeKokoroVoice}
         onSelect={(id) => {
           playerEngine.setVoicePreset(id);
-          if (active) void updateActive({ position: { ...active.position, voicePresetId: id, chunkIndex: snap.chunkIndex, speed: snap.speed } });
+          if (active)
+            void updateActive({
+              position: {
+                ...active.position,
+                voicePresetId: id,
+                chunkIndex: snap.chunkIndex,
+                speed: snap.speed,
+              },
+            });
         }}
       />
       {active && (
