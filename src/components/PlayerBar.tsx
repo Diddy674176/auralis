@@ -6,6 +6,15 @@ function fmt(sec: number) {
   return `${m}:${s.toString().padStart(2, '0')}`;
 }
 
+type SnapExtra = {
+  modelProgress?: number | null;
+  modelStatus?: string | null;
+  errorMessage?: string | null;
+  offerDeviceFallback?: boolean;
+  buffering?: boolean;
+  generateProgress?: { done: number; total: number } | null;
+};
+
 export function PlayerBar({
   totalChunks,
   onOpenVoices,
@@ -17,68 +26,55 @@ export function PlayerBar({
 }) {
   const { snap, engine } = usePlayer();
   if (!visible) return null;
+  const x = snap as typeof snap & SnapExtra;
   const progress = totalChunks
     ? ((snap.chunkIndex + (snap.status === 'ended' ? 1 : 0)) / totalChunks) * 100
     : 0;
-  const playing = snap.status === 'playing' || snap.status === 'buffering';
+  const playing = snap.status === 'playing' || (snap.status as string) === 'buffering' || !!x.buffering;
 
   return (
     <div className="player-bar">
-      {snap.modelProgress != null && snap.modelProgress < 100 && (
+      {x.modelProgress != null && x.modelProgress < 100 && (
         <div className="model-banner">
           <div className="muted" style={{ fontSize: 12, marginBottom: 4 }}>
-            {snap.modelStatus || 'Downloading free AI voice model…'} ({Math.round(snap.modelProgress)}%)
+            {x.modelStatus || 'Downloading free AI voice model...'} ({Math.round(x.modelProgress)}%)
           </div>
           <div className="progress" aria-hidden>
-            <span style={{ width: `${snap.modelProgress}%` }} />
+            <span style={{ width: `${x.modelProgress}%` }} />
           </div>
         </div>
       )}
-      {snap.buffering && (
+      {x.buffering && (
         <div className="muted" style={{ fontSize: 12, padding: '4px 0' }}>
-          Buffering next section…
+          Buffering next section...
         </div>
       )}
-      {snap.errorMessage && (
+      {x.errorMessage && (
         <div className="error-banner">
-          <div style={{ fontSize: 13, marginBottom: 6 }}>{snap.errorMessage}</div>
+          <div style={{ fontSize: 13, marginBottom: 6 }}>{x.errorMessage}</div>
           <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
             <button
               type="button"
               className="btn btn-primary"
               style={{ minHeight: 36 }}
               onClick={() => {
-                engine.dismissError();
+                (engine as { dismissError?: () => void }).dismissError?.();
                 void engine.play();
               }}
             >
               Retry
             </button>
-            {snap.offerDeviceFallback && (
+            {x.offerDeviceFallback && (
               <button
                 type="button"
                 className="btn btn-secondary"
                 style={{ minHeight: 36 }}
-                onClick={() => engine.useDeviceFallback()}
+                onClick={() => (engine as { useDeviceFallback?: () => void }).useDeviceFallback?.()}
               >
                 Use device voice
               </button>
             )}
-            <button
-              type="button"
-              className="btn btn-ghost"
-              style={{ minHeight: 36 }}
-              onClick={() => engine.dismissError()}
-            >
-              Dismiss
-            </button>
           </div>
-        </div>
-      )}
-      {snap.generateProgress && (
-        <div className="muted" style={{ fontSize: 12, padding: '4px 0' }}>
-          Generating book… {snap.generateProgress.done} / {snap.generateProgress.total} (
-          {Math.round((100 * snap.generateProgress.done) / snap.generateProgress.total)}%)
         </div>
       )}
       <div className="progress" aria-hidden>
@@ -90,22 +86,17 @@ export function PlayerBar({
           <div className="s">
             {snap.status === 'ended'
               ? 'Finished'
-              : snap.buffering
-                ? 'Buffering…'
+              : x.buffering
+                ? 'Buffering...'
                 : `~${fmt(snap.remainingSec)} left`}{' '}
             · {snap.speed.toFixed(2)}x
           </div>
         </div>
         <button className="ctrl" type="button" title="Voice" onClick={onOpenVoices}>
-          🎙️
+          Voice
         </button>
-        <button
-          className="ctrl"
-          type="button"
-          title="Previous paragraph"
-          onClick={() => engine.skipParagraph(-1)}
-        >
-          ⏮
+        <button className="ctrl" type="button" title="Previous" onClick={() => engine.skipParagraph(-1)}>
+          Prev
         </button>
         <button
           className="ctrl play"
@@ -113,15 +104,10 @@ export function PlayerBar({
           title={playing ? 'Pause' : 'Play'}
           onClick={() => (playing ? engine.pause() : void engine.play())}
         >
-          {playing ? '❚❚' : '▶'}
+          {playing ? 'Pause' : 'Play'}
         </button>
-        <button
-          className="ctrl"
-          type="button"
-          title="Next paragraph"
-          onClick={() => engine.skipParagraph(1)}
-        >
-          ⏭
+        <button className="ctrl" type="button" title="Next" onClick={() => engine.skipParagraph(1)}>
+          Next
         </button>
       </div>
       <div className="row-between" style={{ marginTop: 8 }}>
