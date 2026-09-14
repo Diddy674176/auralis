@@ -1,0 +1,44 @@
+name: Restore App Settings UI
+on:
+  push:
+    paths:
+      - 'tools/ui_b64/**'
+      - '.github/workflows/restore-ui.yml'
+  workflow_dispatch:
+permissions:
+  contents: write
+jobs:
+  restore:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Decode and write
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import base64, pathlib, re
+          root = pathlib.Path('tools/ui_b64')
+          for name, dest in [
+              ('App', pathlib.Path('src/App.tsx')),
+              ('SettingsView', pathlib.Path('src/components/SettingsView.tsx')),
+          ]:
+              parts = sorted(
+                  [p for p in root.glob(f'{name}.b64.*') if re.fullmatch(r'\d+', p.name.rsplit('.', 1)[-1])],
+                  key=lambda p: int(p.name.rsplit('.', 1)[-1]),
+              )
+              assert parts, name
+              data = base64.b64decode(''.join(p.read_text().strip() for p in parts))
+              dest.write_bytes(data)
+              print(name, 'wrote', dest, len(data), 'from', [p.name for p in parts])
+          text = pathlib.Path('src/App.tsx').read_text()
+          assert 'voiceEngine' in text and 'kokoroVoiceId' in text
+          sv = pathlib.Path('src/components/SettingsView.tsx').read_text()
+          assert 'Kokoro AI' in sv and 'Generate Entire Book' in sv
+          PY
+      - name: Commit
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add src/App.tsx src/components/SettingsView.tsx
+          git diff --staged --quiet || git commit -m "feat(kokoro): wire App voiceEngine + Settings engine UI"
+          git push
