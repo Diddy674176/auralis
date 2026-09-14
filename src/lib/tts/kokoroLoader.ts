@@ -99,16 +99,24 @@ export function splitForKokoro(text: string, maxLen = 380): string[] {
 export async function generateSpeech(
   text: string,
   voice: KokoroVoiceId = 'af_heart',
-  speed = 1,
-): Promise<{ blob: Blob; url: string }> {
+  _speed = 1,
+): Promise<{ blob: Blob; url: string; durationSec: number }> {
   const tts = await loadKokoro();
   const segments = splitForKokoro(text);
   const blobs: Blob[] = [];
   for (const seg of segments) {
-    const audio = await tts.generate(seg, { voice, speed: Math.min(2, Math.max(0.5, speed)) });
+    const audio = await tts.generate(seg, { voice, speed: 1 });
     blobs.push(audio.toBlob());
   }
   const blob = blobs.length === 1 ? blobs[0] : new Blob(blobs, { type: blobs[0]?.type || 'audio/wav' });
   const url = URL.createObjectURL(blob);
-  return { blob, url };
+  const words = text.trim().split(/\s+/).filter(Boolean).length;
+  const durationSec = Math.max(0.8, (words / 155) * 60);
+  return { blob, url, durationSec };
 }
+
+export type AiEngine = 'WebGPU' | 'WASM' | 'unknown';
+export function getAiEngine(): AiEngine { return 'WASM'; }
+export function isWorkerGenerationEnabled(): boolean { return false; }
+export function getAvgRtf(): number | null { return null; }
+export function getLastRtf(): number | null { return null; }
