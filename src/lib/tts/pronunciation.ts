@@ -26,12 +26,12 @@ export function applyPronunciations(text: string, map?: PronunciationMap): strin
   entries.sort((a, b) => b[0].length - a[0].length);
   let out = text;
   for (const [from, to] of entries) {
-    const re = new RegExp(`\b${escapeRegExp(from)}\b`, 'gi');
+    const re = new RegExp('\\b' + escapeRegExp(from) + '\\b', 'gi');
     out = out.replace(re, to);
   }
   return out;
 }
 
 function escapeRegExp(s: string) {
-  return s.replace(/[.*+?^${}()|[\]\]/g, '\\$&');
+  return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
