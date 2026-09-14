@@ -1,5 +1,6 @@
 .model-banner,
-.error-banner {
+.error-banner,
+.buffer-banner {
   padding: 8px 0 4px;
 }
 .error-banner {
@@ -19,4 +20,12 @@
 }
 .field:focus {
   border-color: var(--accent);
+}
+.diag-list {
+  margin: 0;
+  padding-left: 18px;
+  line-height: 1.6;
+}
+.diag-list li {
+  margin-bottom: 4px;
 }

@@ -2,6 +2,7 @@ export type HighlightMode = 'word' | 'sentence' | 'paragraph' | 'none';
 export type ThemeMode = 'dark' | 'light' | 'system';
 export type DocSource = 'paste' | 'txt' | 'pdf' | 'image' | 'url' | 'epub';
 export type VoiceEngine = 'kokoro' | 'device' | 'elevenlabs';
+export type PrepareMode = 'fast' | 'balanced' | 'smooth';
 
 export interface VoicePreset {
   id: string;
@@ -78,6 +79,9 @@ export interface AppSettings {
   sleepTimerMin: number | null;
   voiceEngine: VoiceEngine;
   kokoroVoiceId: string | null;
+  prepareMode: PrepareMode;
+  batterySaver: boolean;
+  showBufferStatus: boolean;
   premiumTts: {
     provider: 'none' | 'elevenlabs' | 'openai';
     apiKeyConfigured: boolean;
