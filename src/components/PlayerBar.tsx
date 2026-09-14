@@ -12,17 +12,24 @@ type SnapExtra = {
   errorMessage?: string | null;
   offerDeviceFallback?: boolean;
   buffering?: boolean;
+  preparing?: boolean;
+  bufferStatus?: string | null;
+  bufferedSec?: number;
+  generatingLabel?: string | null;
   generateProgress?: { done: number; total: number } | null;
+  aiEngine?: string;
 };
 
 export function PlayerBar({
   totalChunks,
   onOpenVoices,
   visible,
+  showBufferStatus = true,
 }: {
   totalChunks: number;
   onOpenVoices: () => void;
   visible: boolean;
+  showBufferStatus?: boolean;
 }) {
   const { snap, engine } = usePlayer();
   if (!visible) return null;
@@ -30,7 +37,20 @@ export function PlayerBar({
   const progress = totalChunks
     ? ((snap.chunkIndex + (snap.status === 'ended' ? 1 : 0)) / totalChunks) * 100
     : 0;
-  const playing = snap.status === 'playing' || (snap.status as string) === 'buffering' || !!x.buffering;
+  const playing =
+    snap.status === 'playing' ||
+    snap.status === 'buffering' ||
+    snap.status === 'preparing' ||
+    !!x.buffering ||
+    !!x.preparing;
+
+  const statusLine = x.preparing
+    ? x.bufferStatus || 'Preparing audio...'
+    : x.buffering
+      ? x.bufferStatus || 'Generating more audio...'
+      : snap.status === 'ended'
+        ? 'Finished'
+        : `~${fmt(snap.remainingSec)} left`;
 
   return (
     <div className="player-bar">
@@ -44,9 +64,17 @@ export function PlayerBar({
           </div>
         </div>
       )}
-      {x.buffering && (
-        <div className="muted" style={{ fontSize: 12, padding: '4px 0' }}>
-          Buffering next section...
+      {(x.preparing || x.buffering) && (
+        <div className="buffer-banner muted" style={{ fontSize: 12, padding: '4px 0' }}>
+          {x.bufferStatus || (x.preparing ? 'Preparing audio...' : 'Generating more audio...')}
+          {typeof x.bufferedSec === 'number' ? ` · ${x.bufferedSec}s ready` : ''}
+        </div>
+      )}
+      {showBufferStatus && !x.preparing && !x.buffering && typeof x.bufferedSec === 'number' && x.bufferedSec > 0 && (
+        <div className="muted" style={{ fontSize: 11, padding: '2px 0' }}>
+          Kokoro{x.aiEngine && x.aiEngine !== 'unknown' ? ` · ${x.aiEngine}` : ''} · Buffered:{' '}
+          {x.bufferedSec}s
+          {x.generatingLabel ? ` · ${x.generatingLabel}` : ''}
         </div>
       )}
       {x.errorMessage && (
@@ -84,12 +112,7 @@ export function PlayerBar({
         <div className="player-title">
           <div className="t">{snap.title}</div>
           <div className="s">
-            {snap.status === 'ended'
-              ? 'Finished'
-              : x.buffering
-                ? 'Buffering...'
-                : `~${fmt(snap.remainingSec)} left`}{' '}
-            · {snap.speed.toFixed(2)}x
+            {statusLine} · {snap.speed.toFixed(2)}x
           </div>
         </div>
         <button className="ctrl" type="button" title="Voice" onClick={onOpenVoices}>
