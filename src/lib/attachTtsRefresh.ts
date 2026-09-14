@@ -1,20 +1,10 @@
-import { getActiveTtsProvider } from './tts';
 import { playerEngine } from './playerEngine';
 
-type Refreshable = {
-  refreshProvider?: () => void;
-  provider: unknown;
-  preloadCache: Map<number, unknown>;
-};
-
-/** Attach refreshProvider onto the singleton at runtime. */
+/** Ensure refreshProvider exists (idempotent — PlayerEngine already defines it). */
 export function attachTtsRefresh() {
-  const eng = playerEngine as unknown as Refreshable;
-  if (typeof eng.refreshProvider === 'function') return;
-  eng.refreshProvider = () => {
-    eng.provider = getActiveTtsProvider();
-    eng.preloadCache.clear();
-  };
+  if (typeof playerEngine.refreshProvider !== 'function') {
+    console.warn('PlayerEngine.refreshProvider missing');
+  }
 }
 
 attachTtsRefresh();
