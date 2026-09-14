@@ -1,18 +1,18 @@
 export type HighlightMode = 'word' | 'sentence' | 'paragraph' | 'none';
 export type ThemeMode = 'dark' | 'light' | 'system';
 export type DocSource = 'paste' | 'txt' | 'pdf' | 'image' | 'url' | 'epub';
+export type VoiceEngine = 'kokoro' | 'device' | 'elevenlabs';
 
 export interface VoicePreset {
   id: string;
   name: string;
   gender: 'male' | 'female' | 'neutral';
   style: string;
-  /** Adult-only labels — never map to underage personas */
   adultOnly?: boolean;
-  /** Heuristic match keys against SpeechSynthesisVoice.name */
   matchHints: string[];
   pitch: number;
   rateBias: number;
+  kokoroVoice?: string;
 }
 
 export interface MappedVoice {
@@ -27,7 +27,6 @@ export interface TextChunk {
   text: string;
   paragraphIndex: number;
   sentenceIndex: number;
-  /** Detected speaker label for dialogue, or 'narrator' */
   speaker: string;
   startChar: number;
   endChar: number;
@@ -50,11 +49,7 @@ export interface DocumentMeta {
 export interface DocumentRecord extends DocumentMeta {
   text: string;
   chunks: TextChunk[];
-  position: {
-    chunkIndex: number;
-    speed: number;
-    voicePresetId: string;
-  };
+  position: { chunkIndex: number; speed: number; voicePresetId: string };
   characterVoices: Record<string, string>;
   bookmarks: Bookmark[];
   notes: Note[];
@@ -74,17 +69,6 @@ export interface Note {
   createdAt: number;
 }
 
-export interface PlayerState {
-  status: 'idle' | 'loading' | 'playing' | 'paused' | 'ended';
-  currentChunkIndex: number;
-  speed: number;
-  volume: number;
-  voicePresetId: string;
-  highlightMode: HighlightMode;
-  estimatedRemainingSec: number;
-  elapsedSec: number;
-}
-
 export interface AppSettings {
   theme: ThemeMode;
   fontSize: number;
@@ -92,13 +76,15 @@ export interface AppSettings {
   highlightMode: HighlightMode;
   skipSeconds: number;
   sleepTimerMin: number | null;
+  voiceEngine: VoiceEngine;
+  kokoroVoiceId: string | null;
   premiumTts: {
     provider: 'none' | 'elevenlabs' | 'openai';
     apiKeyConfigured: boolean;
-    /** Optional CORS proxy (e.g. Cloudflare Worker). Not secret. */
     proxyUrl?: string;
   };
   showBackgroundTips: boolean;
+  pronunciation: Record<string, string>;
 }
 
 export interface MediaLimitsInfo {
