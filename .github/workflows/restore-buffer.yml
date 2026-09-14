@@ -15,6 +15,14 @@ jobs:
       - name: Rebuild sources from b64
         run: |
           set -euo pipefail
+          count() { ls tools/buffer_restore/${1}.b64.* 2>/dev/null | wc -l; }
+          echo "parts: pe=$(count playerEngine) kl=$(count kokoroLoader) sv=$(count SettingsView) app=$(count App) pb=$(count PlayerBar) vp=$(count VoicePicker)"
+          test "$(count playerEngine)" -ge 9
+          test "$(count kokoroLoader)" -ge 3
+          test "$(count SettingsView)" -ge 4
+          test "$(count App)" -ge 4
+          test "$(count PlayerBar)" -ge 2
+          test "$(count VoicePicker)" -ge 2
           restore() {
             local name="$1" dest="$2" expect="$3"
             cat tools/buffer_restore/${name}.b64.* | tr -d '\n' | base64 -d > "$dest"
