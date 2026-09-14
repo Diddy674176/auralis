@@ -95,6 +95,8 @@ export interface AppSettings {
   premiumTts: {
     provider: 'none' | 'elevenlabs' | 'openai';
     apiKeyConfigured: boolean;
+    /** Optional CORS proxy (e.g. Cloudflare Worker). Not secret. */
+    proxyUrl?: string;
   };
   showBackgroundTips: boolean;
 }
