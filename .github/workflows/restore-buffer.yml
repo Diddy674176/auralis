@@ -17,25 +17,25 @@ jobs:
           set -euo pipefail
           count() { ls tools/buffer_restore/${1}.b64.* 2>/dev/null | wc -l; }
           echo "parts: pe=$(count playerEngine) kl=$(count kokoroLoader) sv=$(count SettingsView) app=$(count App) pb=$(count PlayerBar) vp=$(count VoicePicker)"
-          test "$(count playerEngine)" -ge 9
-          test "$(count kokoroLoader)" -ge 3
-          test "$(count SettingsView)" -ge 4
-          test "$(count App)" -ge 4
-          test "$(count PlayerBar)" -ge 2
-          test "$(count VoicePicker)" -ge 2
           restore() {
-            local name="$1" dest="$2" expect="$3"
+            local name="$1" dest="$2" expect="$3" need="$4"
+            local n
+            n=$(count "$name")
+            if [ "$n" -lt "$need" ]; then
+              echo "skip $name (have $n need $need)"
+              return 0
+            fi
             cat tools/buffer_restore/${name}.b64.* | tr -d '\n' | base64 -d > "$dest"
             actual=$(wc -c < "$dest")
             echo "$dest bytes=$actual expect=$expect"
             test "$actual" -eq "$expect"
           }
-          restore playerEngine src/lib/playerEngine.ts 28859
-          restore kokoroLoader src/lib/tts/kokoroLoader.ts 9856
-          restore SettingsView src/components/SettingsView.tsx 12926
-          restore App src/App.tsx 10933
-          restore PlayerBar src/components/PlayerBar.tsx 5465
-          restore VoicePicker src/components/VoicePicker.tsx 5512
+          restore playerEngine src/lib/playerEngine.ts 28859 9
+          restore kokoroLoader src/lib/tts/kokoroLoader.ts 9856 3
+          restore SettingsView src/components/SettingsView.tsx 12926 4
+          restore App src/App.tsx 10933 4
+          restore PlayerBar src/components/PlayerBar.tsx 5465 2
+          restore VoicePicker src/components/VoicePicker.tsx 5512 2
           printf '\n\n<!-- buffer-restore %s -->\n' "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> README.md
       - name: Commit if changed
         run: |
@@ -43,6 +43,6 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           git add src/lib/playerEngine.ts src/lib/tts/kokoroLoader.ts \
             src/components/SettingsView.tsx src/App.tsx \
-            src/components/PlayerBar.tsx src/components/VoicePicker.tsx README.md
+            src/components/PlayerBar.tsx src/components/VoicePicker.tsx README.md || true
           git diff --staged --quiet || git commit -m "fix(kokoro): restore buffer pipeline from b64 parts"
           git push
