@@ -71,7 +71,7 @@ export function VoicePicker({
         </div>
         <p className="muted">
           {engine === 'kokoro'
-            ? 'Free local AI voices. First use downloads the model once (~80MB q8).'
+            ? 'Free local AI voices. First use downloads the model once (~80MB q8). Switching voices keeps the old cache and regenerates from your current position for the new voice.'
             : engine === 'device'
               ? 'Browser Web Speech fallback.'
               : `Premium — ${getActiveTtsProvider().label}. Configure API key in Settings.`}
