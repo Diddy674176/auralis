@@ -56,8 +56,11 @@ export const DEFAULT_SETTINGS: AppSettings = {
   highlightMode: 'sentence',
   skipSeconds: 15,
   sleepTimerMin: null,
+  voiceEngine: 'kokoro',
+  kokoroVoiceId: 'af_heart',
   premiumTts: { provider: 'none', apiKeyConfigured: false, proxyUrl: '' },
   showBackgroundTips: true,
+  pronunciation: {},
 };
 
 export async function loadSettings(): Promise<AppSettings> {
@@ -65,15 +68,17 @@ export async function loadSettings(): Promise<AppSettings> {
   const row = await db.get('settings', 'app');
   if (!row) return { ...DEFAULT_SETTINGS };
   const { id: _id, ...rest } = row;
-  const merged: AppSettings = {
+  return {
     ...DEFAULT_SETTINGS,
     ...rest,
+    voiceEngine: rest.voiceEngine ?? DEFAULT_SETTINGS.voiceEngine,
+    kokoroVoiceId: rest.kokoroVoiceId ?? DEFAULT_SETTINGS.kokoroVoiceId,
+    pronunciation: { ...DEFAULT_SETTINGS.pronunciation, ...(rest.pronunciation ?? {}) },
     premiumTts: {
       ...DEFAULT_SETTINGS.premiumTts,
       ...(rest.premiumTts ?? {}),
     },
   };
-  return merged;
 }
 
 export async function saveSettings(settings: AppSettings): Promise<void> {
